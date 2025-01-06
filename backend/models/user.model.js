@@ -25,12 +25,12 @@ const userSchema = new Schema(
     },
     address: {
       type: String,
-      required: true,
+      // required: true,
       trim: true,
     },
     phoneNo: {
       type: String,
-      required: true,
+      // required: true,
     },
 
     avatar: {
@@ -45,6 +45,7 @@ const userSchema = new Schema(
     refreshToken: {
       type: String,
     },
+
   },
   { timestamps: true }
 );
@@ -90,4 +91,6 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
-export const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+
+export default User;

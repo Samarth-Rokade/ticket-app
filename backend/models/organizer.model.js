@@ -1,16 +1,12 @@
 import mongoose, { Schema } from "mongoose";
-
-
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 const organizerSchema = new Schema({
 
   eventsOrganized: [{
     type: Schema.Types.ObjectId,
     ref: "Event",
   }],
-  bio: {
-    type: String,
-    trim: true,
-  },
   socialLinks: {
     facebook: {
       type: String,
@@ -54,12 +50,12 @@ const organizerSchema = new Schema({
   },
   address: {
     type: String,
-    required: true,
     trim: true,
   },
   phoneNo: {
     type: Number,
     required: true,
+    unique: true
   },
   avatar: {
     type: String, //cloudinary url
@@ -72,7 +68,6 @@ const organizerSchema = new Schema({
   },
   UPI_id: [{
     type: String,
-    required: [true, "UPI ID is required"],
   }],
   refreshToken: {
     type: String,
@@ -101,8 +96,6 @@ organizerSchema.methods.generateAccessToken = function () {
       email: this.email,
       username: this.username,
       fullName: this.fullName,
-      address: this.address,
-      phoneNo: this.phoneNo,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -124,4 +117,6 @@ organizerSchema.methods.generateRefreshToken = function () {
 };
 
 
-export const Organizer = mongoose.model("Organizer", organizerSchema)
+const Organizer = mongoose.model("Organizer", organizerSchema);
+
+export default Organizer;

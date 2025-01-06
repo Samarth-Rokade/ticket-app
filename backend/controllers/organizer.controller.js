@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import User from "../models/user.model.js";
+import Organizer from "../models/organizer.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { deleteFromCloudinary } from "../utils/cloudinary.js";
@@ -9,19 +9,19 @@ import { deleteFromCloudinary } from "../utils/cloudinary.js";
 const Test = asyncHandler(async (req, res) => {
   res.status(200).json({
     message:
-      "this is for user routes testing if you not developer why you where ",
+      "this is for organizer routes testing if you not developer why you where ",
     name: req.body,
   });
 });
 
-const generateAccessAndRefreshToken = async (userId) => {
+const generateAccessAndRefreshToken = async (organizerId) => {
   try {
-    const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    const organizer = await Organizer.findById(organizerId);
+    const accessToken = organizer.generateAccessToken();
+    const refreshToken = organizer.generateRefreshToken();
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    organizer.refreshToken = refreshToken;
+    await organizer.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
   } catch (error) {
@@ -32,7 +32,7 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-const registerUser = asyncHandler(async (req, res) => {
+const registerOrganizer = asyncHandler(async (req, res) => {
   const { email, fullName, username ,password } = req.body;
   console.log(req.body);
 
@@ -42,54 +42,54 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingOrganizer = await Organizer.findOne({ email });
 
-  if (existingUser) {
-    throw new ApiError(409, "User with email already exists");
+  if (existingOrganizer) {
+    throw new ApiError(409, "Organizer with email already exists");
   }
 
-  const user = await User.create({
+  const organizer = await Organizer.create({
     username,
     email,
     fullName,
     password,
   });
 
-  const createdUser = await User.findById(user._id).select(
+  const createdOrganizer = await Organizer.findById(organizer._id).select(
     "-password -refreshToken"
   );
 
-  if (!createdUser) {
-    throw new ApiError(500, "Error in registering the user");
+  if (!createdOrganizer) {
+    throw new ApiError(500, "Error in registering the organizer");
   }
   return res
     .status(201)
-    .json(new ApiResponse(201, createdUser, "User registered successfully"));
+    .json(new ApiResponse(201, createdOrganizer, "Organizer registered successfully"));
 });
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginOrganizer = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!(email || password)) {
     throw new ApiError(400, "email and password are required");
   }
 
-  const user = await User.findOne({email});
+  const organizer = await Organizer.findOne({email});
 
-  if (!user) {
-    throw new ApiError(404, "User does not exist");
+  if (!organizer) {
+    throw new ApiError(404, "Organizer does not exist");
   }
 
-  const isPasswordValid = await user.isPasswordCorrect(password);
+  const isPasswordValid = await organizer.isPasswordCorrect(password);
   if (!isPasswordValid) {
-    throw new ApiError(404, "Invalid user details");
+    throw new ApiError(404, "Invalid organizer details");
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
+    organizer._id
   );
 
-  const loggedInUser = await User.findById(user._id).select(
+  const loggedInOrganizer = await Organizer.findById(organizer._id).select(
     "-password -refreshToken"
   );
 
@@ -105,19 +105,19 @@ const loginUser = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          user: loggedInUser,
+          organizer: loggedInOrganizer,
           accessToken,
           refreshToken,
         },
-        "User LoggedIn successfully"
+        "Organizer LoggedIn successfully"
       )
     );
 });
 
-const logoutUser = asyncHandler(async (req, res) => {
+const logoutOrganizer = asyncHandler(async (req, res) => {
   //takes headers from frontend
-  await User.findByIdAndUpdate(
-    req.user._id,
+  await Organizer.findByIdAndUpdate(
+    req.organizer._id,
     {
       $set: {
         refreshToken: undefined,
@@ -129,7 +129,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "User Logged out "));
+    .json(new ApiResponse(200, {}, "Organizer Logged out "));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -144,17 +144,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         incomingRefreshToken,
         process.env.REFRESH_TOKEN_SECRET
       );
-      const user = await User.findById(decodedToken._id);
+      const organizer = await Organizer.findById(decodedToken._id);
 
-      if (!user) {
+      if (!organizer) {
         throw new ApiError(401, "Invalid refresh token");
       }
-      if (incomingRefreshToken !== user.refreshToken) {
+      if (incomingRefreshToken !== organizer.refreshToken) {
         throw new ApiError(401, "Refresh token is expired or used");
       }
       
       const { accessToken, newRefreshToken } =
-        await generateAccessAndRefreshToken(user._id);
+        await generateAccessAndRefreshToken(organizer._id);
 
       return res
         .status(200)
@@ -174,70 +174,67 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
-  let user_id;
-  if (req.user) {
-    user_id = req.user._id;
+  let organizer_id;
+  if (req.organizer) {
+    organizer_id = req.organizer._id;
   }
 
-  const user = await User.findById(user_id);
-  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  const organizer = await Organizer.findById(organizer_id);
+  const isPasswordCorrect = await organizer.isPasswordCorrect(oldPassword);
 
   if (!isPasswordCorrect) {
     throw new ApiError(400, "Invalid old password");
   }
 
-  user.password = newPassword;
-  await user.save({ validateBeforeSave: false });
+  organizer.password = newPassword;
+  await organizer.save({ validateBeforeSave: false });
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "password changed successfully"));
 });
 
-const getCurrentUser = asyncHandler(async (req, res) => {
+const getCurrentOrganizer = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "Current user fetched"));
+    .json(new ApiResponse(200, req.organizer, "Current organizer fetched"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const updatedData = req.body;
 
-    if(updatedData.password){
-      delete updatedData.password;
-    }
-  if (!req.user?._id) {
-    throw new ApiError(400, "User ID not provided.");
+  if (!req.organizer?._id) {
+    throw new ApiError(400, "Organizer ID not provided.");
   }
 
-  const user_id = req.user._id;
+  const organizer_id = req.organizer._id;
 
   // Step 3: Prepare the updated data (excluding username and email)
 
   console.log("Updated Data:", updatedData);
 
-  // Step 4: Update the user in the database
-  const user = await User.findByIdAndUpdate(
-    user_id,
+  // Step 4: Update the organizer in the database
+  const organizer = await Organizer.findByIdAndUpdate(
+    organizer_id,
     { $set: updatedData },
     { new: true } // Return the updated document
   ).select("-password -refreshToken"); // Exclude sensitive fields
 
-  if (!user) {
-    throw new ApiError(404, "User not found.");
+  if (!organizer) {
+    throw new ApiError(404, "Organizer not found.");
   }
 
-  // Step 5: Return the updated user data
+  // Step 5: Return the updated organizer data
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "User info updated successfully."));
+    .json(new ApiResponse(200, organizer, "Organizer info updated successfully."));
 });
 
-const updateUserOverview = asyncHandler(async (req, res) => {
+const updateOrganizerOverview = asyncHandler(async (req, res) => {
   const { about } = req.body;
 
   try {
-    const user = await User.findOneAndUpdate(
-      req.user._id,
+    const organizer = await Organizer.findOneAndUpdate(
+      req.organizer._id,
       {
         $set: {
           about,
@@ -248,21 +245,21 @@ const updateUserOverview = asyncHandler(async (req, res) => {
       }
     ).select("-password -refreshToken");
 
-    if (!user) {
-      throw new ApiError(404, "user not found");
+    if (!organizer) {
+      throw new ApiError(404, "organizer not found");
     }
     return res
       .status(200)
-      .json(new ApiResponse(200, user, "user overview updated successfully"));
+      .json(new ApiResponse(200, organizer, "organizer overview updated successfully"));
   } catch (error) {
     throw new ApiError(
       500,
-      error.message || "error while updating user overview"
+      error.message || "error while updating organizer overview"
     );
   }
 });
 
-const updateUserAvatar = asyncHandler(async (req, res) => {
+const updateOrganizerAvatar = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ApiError(400, "File not found");
   }
@@ -276,15 +273,15 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatar.url) {
     throw new ApiError(400, "Error while updating avatar");
   }
-  const deletePreviousFile = await User.findById(req.user._id);
+  const deletePreviousFile = await Organizer.findById(req.organizer._id);
   console.log(deletePreviousFile);
 
   if (deletePreviousFile.avatar) {
     const fileurl = deletePreviousFile.avatar.split("/").pop().split(".")[0];
     const deletedfile = await deleteFromCloudinary(fileurl);
   }
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user._id, //change back to req.user._id
+  const updatedOrganizer = await Organizer.findByIdAndUpdate(
+    req.organizer._id, //change back to req.organizer._id
     {
       $set: {
         avatar: avatar.url,
@@ -294,19 +291,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updatedUser, "avatar uploded successfully"));
+    .json(new ApiResponse(200, updatedOrganizer, "avatar uploded successfully"));
 });
 
 export {
   Test,
-  registerUser,
-  loginUser,
-  logoutUser,
+  registerOrganizer,
+  loginOrganizer,
+  logoutOrganizer,
   refreshAccessToken,
   changePassword,
-  getCurrentUser,
-  updateUserOverview,
+  getCurrentOrganizer,
+  updateOrganizerOverview,
   updateAccountDetails,
-  updateUserAvatar,
+  updateOrganizerAvatar,
 
 };
