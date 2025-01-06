@@ -33,11 +33,11 @@ const generateAccessAndRefreshToken = async (organizerId) => {
 };
 
 const registerOrganizer = asyncHandler(async (req, res) => {
-  const { email, fullName, username ,password } = req.body;
+  const { email, fullName, username, password } = req.body;
   console.log(req.body);
 
   if (
-    [email, fullName,username, password].some((field) => field?.trim() === "")
+    [email, fullName, username, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
@@ -74,7 +74,7 @@ const loginOrganizer = asyncHandler(async (req, res) => {
     throw new ApiError(400, "email and password are required");
   }
 
-  const organizer = await Organizer.findOne({email});
+  const organizer = await Organizer.findOne({ email });
 
   if (!organizer) {
     throw new ApiError(404, "Organizer does not exist");
@@ -152,7 +152,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       if (incomingRefreshToken !== organizer.refreshToken) {
         throw new ApiError(401, "Refresh token is expired or used");
       }
-      
+
       const { accessToken, newRefreshToken } =
         await generateAccessAndRefreshToken(organizer._id);
 
@@ -201,7 +201,9 @@ const getCurrentOrganizer = asyncHandler(async (req, res) => {
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const updatedData = req.body;
-
+  if (updatedData.password) {
+    delete updatedData.password;
+  }
   if (!req.organizer?._id) {
     throw new ApiError(400, "Organizer ID not provided.");
   }

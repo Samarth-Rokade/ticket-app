@@ -6,7 +6,8 @@ import {
   logoutOrganizer,
   refreshAccessToken,
   getCurrentOrganizer,
-
+  updateAccountDetails,
+  changePassword,
 } from "../controllers/organizer.controller.js";
 import { verifyJWT } from "../middlewares/organizerAuth.middleware.js";
 
@@ -25,6 +26,8 @@ router.get("/logout", verifyJWT, logoutOrganizer);
 router.post("/refresh-token", refreshAccessToken);
 
 router.get("/get-current-user", verifyJWT, getCurrentOrganizer);
+router.post("/update-account-details", verifyJWT, updateAccountDetails);
+router.post("/change-password", verifyJWT, changePassword);
 
 
 export default router;
