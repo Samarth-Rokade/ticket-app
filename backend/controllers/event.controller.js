@@ -2,7 +2,7 @@ import Event from '../models/event.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import Organizer from '../models/organizer.model.js';
+// import Organizer from '../models/organizer.model.js';
 
 // Get all events
 export const getAllEvents = asyncHandler(async (req, res) => {
@@ -24,13 +24,13 @@ export const getEventById = asyncHandler(async (req, res) => {
 
 // Create a new event
 export const createEvent = asyncHandler(async (req, res) => {
-    const { name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags } = req.body;
+    const { name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags, category,organizer } = req.body;
 
-    if ([name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate].some((field) => field?.trim() === "" || field == null))
+    if ([name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, category, organizer].some((field) => field?.trim() === "" || field == null))
         throw new ApiError(400, "Enter all fields");
 
-    const event = new Event.create({
-        name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags,
+    const event = await Event.create({
+       organizer, category, name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags,
     });
     const newEvent = await event.save();
     if (!newEvent) throw new ApiError(500, "Event not created: Error in createEvent")
@@ -42,7 +42,6 @@ export const createEvent = asyncHandler(async (req, res) => {
 const verifyOrganizer = async (eventId, organizerId) => {
     const event = await Event.findById(eventId);
     if (!event) throw new ApiError(404, "Event not found");
-    console.log("event organizer:",event.organizer.toString());
     if (event.organizer.toString() !== organizerId) throw new ApiError(403, "You are not authorized to Modify this event");
 };
 
