@@ -26,24 +26,27 @@ export const buyTicket = asyncHandler(async (req, res) => {
     const totalTickets = event.ticketsAvailable;
     const totalTicketsSold = event.ticketsSold;
     const totalTicketsAvailable = totalTickets - totalTicketsSold;
-    
+
     if (ticketsPurchashed > totalTicketsAvailable) {
         throw new ApiError(400, "Enough Tickets not available");
-    } else {
-        const serialNo = totalTicketsSold + 1;
-        const ticketsSold = totalTicketsSold + ticketsPurchashed
-       await Event.findByIdAndUpdate(
-            eventId, { $set: {ticketsSold} }, { new: true }
-        );
-        if ( Date.now() <= event.ticketSellingDate || Date.now() >= event.date ) throw new ApiError(400, "Ticket cannot be purchashed before event date");
-        const ticket = await Ticket.create({
-            eventId, assignedTo, ticketsPurchashed, serialNo
-        });
-        const { accessToken } = await generateAccessTicketToken(ticket._id);
-        ticket.accessToken = accessToken;
-        const newTicket = await ticket.save();
-        res.status(200).json(new ApiResponse(200, newTicket, "Ticket bought successfully"))
     }
+
+    const serialNo = totalTicketsSold + 1;
+    const ticketsSold = totalTicketsSold + ticketsPurchashed
+    await Event.findByIdAndUpdate(
+        eventId, { $set: { ticketsSold } }, { new: true }
+    );
+
+    if (Date.now() <= event.ticketSellingDate || Date.now() >= event.StartingDate) throw new ApiError(400, "Ticket cannot be purchashed after event starting date");
+    
+    const ticket = await Ticket.create({
+        eventId, assignedTo, ticketsPurchashed, serialNo
+    });
+    const { accessToken } = await generateAccessTicketToken(ticket._id);
+    ticket.accessToken = accessToken;
+    const newTicket = await ticket.save();
+    res.status(200).json(new ApiResponse(200, newTicket, "Ticket bought successfully"))
+
 });
 
 export const getTicketById = asyncHandler(async (req, res) => {
@@ -69,8 +72,8 @@ const verifyUser = async (ticketId, userId) => {
 };
 export const cancelTicket = asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const {ticketId, count} = req.body;
-    if(count<0) throw new ApiError(400, "Enter a valid count");
+    const { ticketId, count } = req.body;
+    if (count < 0) throw new ApiError(400, "Enter a valid count");
 
     await verifyUser(ticketId, userId);
     const ticket = await Ticket.findById(ticketId);
@@ -78,12 +81,12 @@ export const cancelTicket = asyncHandler(async (req, res) => {
     const ticketsSold = event.ticketsSold;
     const ticketsPurchashed = ticket.ticketsPurchashed;
     console.log("TicketSold", ticketsSold);
-    if(ticket.ticketsPurchashed < count) {
-        await Event.findByIdAndUpdate(ticket.eventId,{$set: {ticketsSold: ticketsSold - ticketsPurchashed}})
+    if (ticket.ticketsPurchashed < count) {
+        await Event.findByIdAndUpdate(ticket.eventId, { $set: { ticketsSold: ticketsSold - ticketsPurchashed } })
         await Ticket.findByIdAndDelete(ticketId);
-    } 
+    }
     if (!ticket) throw new ApiError(404, "Ticket not found");
-    if (ticket.createdAt > ticket.eventId.date) throw new ApiError(400, "Ticket cannot be cancelled after event date");
+    if (ticket.createdAt > ticket.eventId.StartingDate) throw new ApiError(400, "Ticket cannot be cancelled after event starting date");
 
     const newTicketsSold = ticketsSold - count;
     await Ticket.findByIdAndUpdate(ticketId, { $set: { ticketsPurchashed: ticketsPurchashed - count } }, { new: true });
@@ -92,10 +95,10 @@ export const cancelTicket = asyncHandler(async (req, res) => {
 });
 
 export const updateStatus = asyncHandler(async (req, res) => {
-    const {ticketid } = req.body;
+    const { ticketid } = req.body;
     const ticket = await Ticket.findById(ticketid);
     if (!ticket) throw new ApiError(404, "Ticket not found");
     if (ticket.status === "scanned") throw new ApiError(400, "Ticket already scanned");
-    const updateTicket = await Ticket.findByIdAndUpdate(ticketid, { $set: {status: "scanned"}  }, { new: true });
+    const updateTicket = await Ticket.findByIdAndUpdate(ticketid, { $set: { status: "scanned" } }, { new: true });
     res.status(200).json(new ApiResponse(200, updateTicket, "Ticket status updated successfully"));
 }) 

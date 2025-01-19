@@ -3,7 +3,6 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 // import Organizer from '../models/organizer.model.js';
-
 // Get all events
 export const getAllEvents = asyncHandler(async (req, res) => {
     const events = await Event.find();
@@ -24,13 +23,29 @@ export const getEventById = asyncHandler(async (req, res) => {
 
 // Create a new event
 export const createEvent = asyncHandler(async (req, res) => {
-    const { name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags, category,organizer } = req.body;
+    const { name, description, StartingDate, EndingDate, time, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags, category,organizer } = req.body;
 
-    if ([name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, category, organizer].some((field) => field?.trim() === "" || field == null))
+    if ([name, description, StartingDate, EndingDate, time, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, category, organizer].some((field) => field?.trim() === "" || field == null))
         throw new ApiError(400, "Enter all fields");
+    else if (price < 0 || ticketsAvailable < 0) {
+        throw new ApiError(400, "Price and tickets available should be greater than 0")
+    }
+    else if(StartingDate < Date.now()){
+        throw new ApiError(400, "Event starting date should be after current date")
+    }
+    else if(StartingDate < ticketSellingDate){
+        throw new ApiError(400, "Ticket Selling date should be before than event starting date")
+    }
+    else if(Date.now() > ticketSellingDate){
+        throw new ApiError(400, "Ticket cannot be purchashed")
+    }
+    else if(EndingDate < StartingDate){
+        throw new ApiError(400, "Event ending date should be after event starting date")
+    }
+
 
     const event = await Event.create({
-       organizer, category, name, description, date, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags,
+       organizer, category, name, description, StartingDate, EndingDate, time, location, locationUrl, price, ticketsAvailable, poster, ticketSellingDate, tags,
     });
     const newEvent = await event.save();
     if (!newEvent) throw new ApiError(500, "Event not created: Error in createEvent")

@@ -25,7 +25,7 @@ router.route("/login").post(loginOrganizer);
 router.get("/logout", verifyJWT, logoutOrganizer);
 router.post("/refresh-token", refreshAccessToken);
 
-router.get("/get-current-user", verifyJWT, getCurrentOrganizer);
+router.get("/get-current-organiser", verifyJWT, getCurrentOrganizer);
 router.post("/update-account-details", verifyJWT, updateAccountDetails);
 router.post("/change-password", verifyJWT, changePassword);
 
